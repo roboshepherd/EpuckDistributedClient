@@ -8,18 +8,23 @@ class DataManager:
        # key: x, y, theta, time_stamp(ts) val: <values>
         self.mRobotPoseAvailable = self.mgr.Event() # set by dbus client
         self.mTaskInfo = self.mgr.dict() 
-        # key: taskid, value: list of attrib (t.s., x, y,  phi)
+        # key: taskid, value: list of attrib (t.s., x, y,  phi)        
         self.mTaskInfoAvailable = self.mgr.Event() # set by dbus client
         self.mSelectedTask = self.mgr.dict()  
         # Set/Unset by TaskSelector, DeviceController
-        # key: SEE RILsetup, val: Values
-        
+        # key: SEE RILsetup, val: Values        
         self.mSelectedTaskAvailable = self.mgr.Event() 
         # Set/Unset by TaskSelector
-        
         self.mSelectedTaskStarted = self.mgr.Event()
         #set by Device controller, used/clear by dbus_emmitter
         
         # DeviceController Signals
         self.mTaskTimedOut = self.mgr.Event()  # Set/Unset by DeviceController
-        #self.mDeviceNotResponding = 
+
+        # RobotPeers stored as dict:'ts'' = timestamp and 'peers' = []
+        self.mRobotPeers = self.mgr.dict()
+
+        # local taskinfo: dict key: taskid, val: taskinfo with type-of-info
+        # primary, secondary
+        self.mLocalTaskInfo = self.mgr.dict()
+        

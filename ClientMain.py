@@ -10,14 +10,14 @@ logger = logging.getLogger("EpcLogger")
 multiprocessing.log_to_stderr(logging.DEBUG)
 
 from RILCommonModules import *
-from EpuckCentralizedClient import *
-from EpuckCentralizedClient.data_manager import *
-from EpuckCentralizedClient.ril_robot import *
-#import EpuckCentralizedClient.dbus_server
-from EpuckCentralizedClient.dbus_listener import *
-from EpuckCentralizedClient.dbus_emitter import *
-from EpuckCentralizedClient.task_selector import *
-from EpuckCentralizedClient.device_controller import *
+from EpuckDistributedClient import *
+from EpuckDistributedClient.data_manager import *
+from EpuckDistributedClient.ril_robot import *
+#import EpuckDistributedClient.dbus_server
+from EpuckDistributedClient.dbus_listener import *
+from EpuckDistributedClient.dbus_emitter import *
+from EpuckDistributedClient.task_selector import *
+from EpuckDistributedClient.device_controller import *
 
 
 def main():
@@ -51,6 +51,7 @@ if __name__ == '__main__':
         robotid = sys.argv[1]
 	# setup processes
 	dbus_shared_path = DBUS_PATH_BASE + robotid
+	dbus_locality_path = DBUS_PATH_EPUCK_LOCALITY
 	dm = DataManager(int(robotid))
 	##----------START TEST CODE ----#
 	#dm.mSelectedTask[SELECTED_TASK_ID] = 1
@@ -64,6 +65,7 @@ if __name__ == '__main__':
 	sig1 = SIG_ROBOT_POSE 
 	sig2 = SIG_TASK_INFO
 	sig3 = SIG_TASK_STATUS
+	sig4 = SIG_LOCAL_TASK_INFO
 	delay = 3 # interval between signals
 	#dbus_server = multiprocessing.Process(\
 		#target=dbus_server.server_main,
@@ -82,7 +84,8 @@ if __name__ == '__main__':
 	dbus_emitter = multiprocessing.Process(\
 		target=emitter_main,\
 		name="DBusEmitter",\
-		args=(dm,  DBUS_IFACE_EPUCK, dbus_shared_path,  sig3,   delay,))
+		args=(dm,  DBUS_IFACE_EPUCK, dbus_shared_path, dbus_locality_path,\
+		 sig3,  sig4, delay,))
 	device_controller =  multiprocessing.Process(\
 		target=controller_main,\
 		name="DeviceController",  

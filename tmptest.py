@@ -1,14 +1,16 @@
 #!/usr/bin/env python
 
-#from device_controller import *
+from data_manager import *
+from dbus_listener import *
+from dbus_emitter import *
+dm = DataManager(33)
+dm.mLocalTaskInfo = {1: [1200000, 1507, 944, 0.0, 0.5]}
+dm.mRobotPeers[ROBOT_PEERS] = [3, 5]
+#listener_main(dm)
 
-from epuck_navigator import *
+emitter_main(dm)
 
-navigator = EpuckNavigator()
-epuck = Epuck(12)
 
-#dc = DeviceController(1,0)
-#print "TCA:", dc.navigator.mTaskConeAngle
 
-navigator.GoForward(epuck, 10)
-#navigator.GoTowardsTarget(epuck,  2429, 680, 5.39, 500, 2530, 10)
+
+
