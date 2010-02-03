@@ -86,16 +86,17 @@ def local_taskinfo_signal_handler(robotid, taskinfo):
                 if (taskinfo_rcvd[TASK_INFO_TIME]\
                   > taskinfo_old[TASK_INFO_TIME]):                    
                     datamgr_proxy.mLocalTaskInfo[key] = taskinfo_rcvd
-                    print "Local task info updated, @dm now:"
-                    print datamgr_proxy.mLocalTaskInfo
+                    print "Local task info updated @dm now:"
+                    #print datamgr_proxy.mLocalTaskInfo
                 else:
                     print "Robot's local task%d's info is more recent:" %key
-                    print "@dm now:"
-                    print datamgr_proxy.mLocalTaskInfo
+                    #print "@dm now:"
+                    #print datamgr_proxy.mLocalTaskInfo
             else: # old dict was empty
                 datamgr_proxy.mLocalTaskInfo[key] = taskinfo_rcvd
                 print "Local task info added @dm now:"
-                print  datamgr_proxy.mLocalTaskInfo
+                #print  datamgr_proxy.mLocalTaskInfo
+                datamgr_proxy.mTaskInfoAvailable.set()
     except Exception, e:
         print "Err:", e
         

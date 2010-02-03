@@ -52,13 +52,16 @@ if __name__ == '__main__':
 	# setup processes
 	dbus_shared_path = DBUS_PATH_BASE + robotid
 	dm = DataManager(int(robotid))
+	# init local taskinfo
+	for task in (1, MAX_SHOPTASK + 1):
+		dm.mLocalTaskInfo[task] = [0, 0, 0, 0, 0]
 	##----------START TEST CODE ----#
 	#dm.mSelectedTask[SELECTED_TASK_ID] = 1
 	#dm.mSelectedTask[SELECTED_TASK_STATUS] = TASK_SELECTED
 	#dm.mSelectedTask[SELECTED_TASK_INFO] = [1200000, 1507, 944, 0.0, 0.5]
 	#dm.mTaskInfo[1] = [1200000, 1507, 944, 0.0, 0.5]
 	dm.mLocalTaskInfo = {2: [time.time(), 1507, 944, 0.0, 0.5]}
-	dm.mRobotPeers[ROBOT_PEERS] = [3, 5]
+	#dm.mRobotPeers[ROBOT_PEERS] = [3, 5]
 	## -- END TEST CODE --------#
 	
 	robot = RILRobot(int(robotid))

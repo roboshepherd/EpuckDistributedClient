@@ -59,17 +59,17 @@ def emit_robot_signals(delay,  sig1):
     except Exception, e:
         print "Err at emit_robot_signals():", e
     # emit robot's task activity signal
-    #try:
-        #datamgr_proxy.mSelectedTaskStarted.wait() ### Blocking !!! ###
-        #robotid = datamgr_proxy.mRobotID
-        #taskdict = datamgr_proxy.mSelectedTask
-        #datamgr_proxy.mSelectedTaskStarted.clear()
-        #taskid =  eval(str(taskdict[SELECTED_TASK_ID])) 
-        #status = str(taskdict[SELECTED_TASK_STATUS]) 
-        ##print "From TaskDict got %i %s"  %(taskid,  status)
-        #task_signal.TaskStatus(sig1,  robotid,  taskid)
-    #except:
-        #print "Emitting Robot Task Status signal failed"
+    try:
+        datamgr_proxy.mSelectedTaskStarted.wait() ### Blocking !!! ###
+        robotid = datamgr_proxy.mRobotID
+        taskdict = datamgr_proxy.mSelectedTask
+        datamgr_proxy.mSelectedTaskStarted.clear()
+        taskid =  eval(str(taskdict[SELECTED_TASK_ID])) 
+        status = str(taskdict[SELECTED_TASK_STATUS]) 
+        #print "From TaskDict got %i %s"  %(taskid,  status)
+        task_signal.TaskStatus(sig1,  robotid,  taskid)
+    except:
+        print "Emitting Robot Task Status signal failed"
    
 
 def emitter_main(dm,  dbus_iface= DBUS_IFACE_EPUCK,\

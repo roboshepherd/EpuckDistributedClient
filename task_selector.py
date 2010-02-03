@@ -28,7 +28,7 @@ class TaskSelector():
     def __init__(self, dm,  robot): # taskinfo as recvd from dbus signal
         self.datamgr = dm
         self.robot =  robot # ril_robot
-        self.taskinfo = dm.mTaskInfo
+        self.taskinfo = dm.mLocalTaskInfo
         self.stimulus = []
         self.probabilities = []
         self.taskranges = [] # put inst. of TaskProbRange()s
@@ -70,7 +70,11 @@ class TaskSelector():
         #logger.debug("@TS Robot pose %s:" , dm.mRobotPose.items() )
         r.pose.UpdateFromList(dm.mRobotPose)
         logger.debug("@TS  Robot pose x=%f y=%f:" , r.pose.x,  r.pose.y )
+        ##-----------------------------------------------------------##
         ti = self.taskinfo
+        # Combine both local peer's and task-server's taskinfo, if any
+        ti.update(dm.mTaskInfo)
+        ##-----------------------------------------------------------##
         logger.debug("\t TaskInfo: %s",  ti.items() )
         taskCount = len(ti)
         #logger.debug("\t task count %d:" , taskCount)
