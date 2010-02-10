@@ -24,7 +24,7 @@ DEVICE_IDLE = 3
 _packet_loss = ''
 EXIT_COND = True 
 # may be changed later to set as time duration 
-SMALL_DELAY = 3
+SMALL_DELAY = 0.1 # orig : 3
 TASK_STEP_DURATION = 30
 
 def process_ping_output(output):
@@ -111,7 +111,9 @@ class DeviceController():
             self.epuck_ready = False
             print "Failed to initialize Myro epuck robot:", e
 
-    def EpuckReady(self):        
+    def EpuckReady(self):
+        if (not self.epuck_ready):
+            self.InitEpuck()
         return self.epuck_ready
 
     def TaskSelected(self):
@@ -186,6 +188,7 @@ class DeviceController():
             self.navigator.AppendMotionLog()
         except Exception, e:
             logger.debug ("\tRandom walk failed %s", e)
+            self.epuck_ready = False
     
     def MoveToTarget(self):
         rx, ry, rtheta = self.GetUpdatedRobotPose()
@@ -202,6 +205,7 @@ class DeviceController():
             self.navigator.AppendMotionLog()
         except Exception,e:
             logger.warn("Going towards target failed: %s", e)
+            self.epuck_ready = False
 
     def ResetTaskStats(self):
         self.task_done = True
@@ -301,7 +305,7 @@ class DeviceController():
                         logger.debug ("\t go out to DEVICE_MOVING")
                         break
                 else:
-                    logger.debug ("\t Pose not Updated")
+                    logger.debug ("\t waiting for pose update")
                     # stay in loop
                     self.status = DEVICE_IDLE 
                     # but do random walk to be seen by camera
@@ -316,7 +320,7 @@ class DeviceController():
                 self.RunDeviceAvailableLoop()
                 self.RunDeviceMovingLoop()
                 self.RunDeviceIdleLoop()                
-                time.sleep(1)
+                time.sleep(0.1)
             except (KeyboardInterrupt, SystemExit):
                 print "User requested exit..DeviceController shutting down now"                
                 sys.exit(0)

@@ -22,7 +22,7 @@ FORWARD_STEP_TIME = 1
 # Obstacle Avoidance params
 BACKWARD_SPEED1 = -0.4 # orig: -0.4
 BACKWARD_TURN = 0.3 # orig: 0 , no turn
-TINY_SLEEP = 0.05 # orig: 0.05
+TINY_SLEEP = 0.01 # orig: 0.05
 
 class NavFunc :
     NOTSET = -1
@@ -179,7 +179,7 @@ class EpuckNavigator:
         # Trasnslation is fixed
         time.sleep(TINY_SLEEP)
         self.Translate(epuck)
-        time.sleep(TINY_SLEEP) # to stabilize pose
+        #time.sleep(TINY_SLEEP) # to stabilize pose
         
     def SetupTaskLoc(self, x, y, r=TASK_RADIUS, ca=TASK_CONE_ANGLE):
         self.mTaskPose.x = x
