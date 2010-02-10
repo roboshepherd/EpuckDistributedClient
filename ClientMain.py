@@ -4,16 +4,16 @@ from multiprocessing import *
 import time
 import sys
 import  logging,  logging.config,  logging.handlers
-logging.config.fileConfig("\
-/home/newport-ril/centralized-expt/EpuckCentralizedClient/logging.conf")
+logging.config.fileConfig("/home/newport-ril/\
+centralized-expt/EpuckCentralizedClient/logging.conf")
 logger = logging.getLogger("EpcLogger")
 multiprocessing.log_to_stderr(logging.DEBUG)
 
 from RILCommonModules.RILSetup import *
-from EpuckDistributedClient import *
+#from EpuckDistributedClient import *
 from EpuckDistributedClient.data_manager import *
 from EpuckDistributedClient.ril_robot import *
-#import EpuckDistributedClient.dbus_server
+##import EpuckDistributedClient.dbus_server
 from EpuckDistributedClient.dbus_listener import *
 from EpuckDistributedClient.dbus_emitter import *
 from EpuckDistributedClient.task_selector import *
@@ -24,19 +24,20 @@ def main():
 	logging.debug("--- Start EPC---")
 	##dbus_server.start()
 	dbus_listener.start()
-	#device_controller.start()
-	#taskselector.start()
+	device_controller.start()
+	taskselector.start()
 	dbus_emitter.start()
 	# Ending....
 	time.sleep(2)
 	##dbus_server.join()
 	try:
+		pass
 		dbus_listener.join()
-		#device_controller.join()
-		#taskselector.join()
+		device_controller.join()
+		taskselector.join()
 		dbus_emitter.join()
 	except (KeyboardInterrupt, SystemExit):
-		logging.debug("--- End EPC---")
+		#logging.debug("--- End EPC---")
 		print "User requested exit..ClientMain shutting down now"                
 		sys.exit(0)
 
@@ -53,19 +54,22 @@ if __name__ == '__main__':
 	dbus_shared_path = DBUS_PATH_BASE + robotid
 	dm = DataManager(int(robotid))
 	# init local taskinfo
-	for task in (1, MAX_SHOPTASK + 1):
-		dm.mLocalTaskInfo[task] = [0, 0, 0, 0, 0]
+	#for task in (1, MAX_SHOPTASK + 1):
+	#	dm.mLocalTaskInfo[task] = [0, 0, 0, 0, 0]
 	##----------START TEST CODE ----#
 	#dm.mSelectedTask[SELECTED_TASK_ID] = 1
 	#dm.mSelectedTask[SELECTED_TASK_STATUS] = TASK_SELECTED
 	#dm.mSelectedTask[SELECTED_TASK_INFO] = [1200000, 1507, 944, 0.0, 0.5]
 	#dm.mTaskInfo[1] = [1200000, 1507, 944, 0.0, 0.5]
-	dm.mLocalTaskInfo = {2: [time.time(), 1507, 944, 0.0, 0.5]}
+	#dm.mLocalTaskInfo = {2: [time.time(), 1507, 944, 0.0, 0.5]}
 	#dm.mRobotPeers[ROBOT_PEERS] = [3, 5]
 	## -- END TEST CODE --------#
+	try:
+		robot = RILRobot(int(robotid))
+		robot.InitTaskRecords(MAX_SHOPTASK)
+	except Exception, e:
+		print "RIL robot failed:", e
 	
-	robot = RILRobot(int(robotid))
-	robot.InitTaskRecords(MAX_SHOPTASK)
 	sig1 = SIG_ROBOT_POSE 
 	sig2 = SIG_TASK_INFO
 	sig3 = SIG_TASK_STATUS
@@ -80,10 +84,7 @@ if __name__ == '__main__':
 	dbus_listener = multiprocessing.Process(\
 		target=listener_main,\
 		name="DBusListener",\
-		args=(dm,  DBUS_IFACE_TRACKER, dbus_shared_path,\
-			DBUS_IFACE_TASK_SERVER, DBUS_PATH_TASK_SERVER,\
-			DBUS_IFACE_EPUCK, robots_cfg,\
-			sig1,  sig2, sig4, sig5, delay,))
+		args=(dm, ))
 	taskselector = multiprocessing.Process(\
 		target=selector_main,\
 		name="TaskSelector",\
@@ -91,8 +92,7 @@ if __name__ == '__main__':
 	dbus_emitter = multiprocessing.Process(\
 		target=emitter_main,\
 		name="DBusEmitter",\
-		args=(dm,  DBUS_IFACE_EPUCK, dbus_shared_path,\
-		sig3,  sig5, robots_cfg, delay,))
+		args=(dm, ))
 	device_controller =  multiprocessing.Process(\
 		target=controller_main,\
 		name="DeviceController",  

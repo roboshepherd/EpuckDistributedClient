@@ -8,7 +8,7 @@ import  logging,  logging.config,  logging.handlers
 logger = logging.getLogger("EpcLogger")
 
 
-from myro import Epuck
+from myro import *
 from RILCommonModules.RILSetup import *
 from RILCommonModules.LiveGraph import *
 from RILCommonModules.pose import *
@@ -101,29 +101,34 @@ class DeviceController():
         except:
             print "Pose logging failed"
 
-    def EpuckReady(self):
+    def InitEpuck(self):
+        self.epuck_ready = False
         try:
             self.epuck = Epuck(self.datamgr_proxy.mRobotID)
             self.epuck_ready = True
-        except:
+            #self.epuck.stop()
+        except Exception, e:
             self.epuck_ready = False
-            print "Failed to initialize Myro epuck robot"
+            print "Failed to initialize Myro epuck robot:", e
+
+    def EpuckReady(self):        
         return self.epuck_ready
 
     def TaskSelected(self):
         self.task_selected = False
-        
-        self.datamgr_proxy.mSelectedTaskAvailable.wait()
-        taskdict = self.datamgr_proxy.mSelectedTask
-        taskid = eval(str(taskdict[SELECTED_TASK_ID]))
-        status = str(taskdict[SELECTED_TASK_STATUS])
-        print "From TaskDict got %i %s"  %(taskid,  status)
-        self.datamgr_proxy.mSelectedTaskAvailable.clear() # read complete
-        
-        if status == TASK_SELECTED:
-            self.task_selected = True
-        if taskid is RANDOM_WALK_TASK_ID:
-            self.task_is_rw = True
+        try:
+            #self.datamgr_proxy.mSelectedTaskAvailable.wait()
+            taskdict = self.datamgr_proxy.mSelectedTask
+            taskid = eval(str(taskdict[SELECTED_TASK_ID]))
+            status = str(taskdict[SELECTED_TASK_STATUS])
+            print "From TaskDict got %i %s"  %(taskid,  status)
+            #self.datamgr_proxy.mSelectedTaskAvailable.clear() # read complete
+            if status == TASK_SELECTED:
+                self.task_selected = True
+            if taskid is RANDOM_WALK_TASK_ID:
+                self.task_is_rw = True
+        except Exception, e:
+            logger.warn("@TaskSelected not available: %s", e)
         return self.task_selected
     
     def RandomWalkTask(self):
@@ -175,12 +180,12 @@ class DeviceController():
     def DoRandomWalk(self):
         maxtime = time.time() + self.task_period
         try:
-            self.navigator.GoForward(self.epuck, maxtime)
             logger.debug ("\tRandom walking")
+            self.navigator.GoForward(self.epuck, maxtime)
             #time.sleep(self.task_period)
             self.navigator.AppendMotionLog()
-        except:
-            logger.debug ("\tRandom walk failed")
+        except Exception, e:
+            logger.debug ("\tRandom walk failed %s", e)
     
     def MoveToTarget(self):
         rx, ry, rtheta = self.GetUpdatedRobotPose()
@@ -201,7 +206,7 @@ class DeviceController():
     def ResetTaskStats(self):
         self.task_done = True
         self.task_end = time.time()
-        self.datamgr_proxy.mTaskTimedOut.set() # Trigger TaskSelector
+        self.datamgr_proxy.mTaskTimedOut.set() # Trigger TaskSelector, Emitter
         #time.sleep(1)
         #self.datamgr_proxy.mTaskTimedOut.clear() 
         self.task_is_rw = False
@@ -209,7 +214,6 @@ class DeviceController():
         self.task_selected = False
 
  
-
     def RunDeviceUnavailableLoop(self):
         while self.status is DEVICE_NOT_RESPONDING:
             logger.debug ("Entering DEVICE_NOT_RESPONDING loop--->")
@@ -223,19 +227,20 @@ class DeviceController():
     def RunDeviceAvailableLoop(self):
         while self.status is DEVICE_AVAILABLE:
             logger.debug ("Entering DEVICE_AVAILABLE loop--->")
+            self.DoRandomWalk() ## To find task
             if self.TaskSelected():
                 self.task_start = time.time()
                 self.status = DEVICE_MOVING  # go out of this loop
                 self.datamgr_proxy.mSelectedTaskStarted.set() #>> dbus_emitter
                 break
-            elif (not self.EpuckReady()):
+            if (not self.EpuckReady()):
                 self.status = DEVICE_NOT_RESPONDING # go out of this loop
                 break
             else:
                self.status = DEVICE_AVAILABLE # stay in-loop
-               self.DoRandomWalk() ## To improve id-pose detection
                print "@DEVICE_AVAILABLE loop"
-               time.sleep(SMALL_DELAY)
+               self.DoRandomWalk() ## To improve id-pose detection
+               #time.sleep(SMALL_DELAY)
    
     def RunDeviceMovingLoop(self):
         while self.status is DEVICE_MOVING:
@@ -330,5 +335,6 @@ def controller_main(data_mgr):
         #bdaddr = get_config(config_file,  'bdaddr')
         dc = DeviceController(data_mgr)
         dc.InitLogFiles()
+        dc.InitEpuck()
         dc.RunMainLoop()
 

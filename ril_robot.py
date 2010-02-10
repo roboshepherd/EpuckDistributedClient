@@ -47,7 +47,7 @@ class RILRobot:
         try:
             self.pose.Update(datamgr.mRobotPose)
         except:
-            print "@Robot Raw pose from datamgr: %d" % len(datamgr.mRobotPose)
+            print "@Robot Raw pose from datamgr: %d" %(len(datamgr.mRobotPose))
         #print self.pose.info
     
     def UpdateTaskRecords(self,  selectedTaskId):

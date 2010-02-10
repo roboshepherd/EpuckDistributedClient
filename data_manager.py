@@ -23,6 +23,7 @@ class DataManager:
 
         # RobotPeers stored as dict:'ts'' = timestamp and 'peers' = []
         self.mRobotPeers = self.mgr.dict()
+        self.mRobotPeersAvailable = self.mgr.Event() 
 
         # local taskinfo: dict key: taskid, val: taskinfo with type-of-info
         # primary, secondary

@@ -47,6 +47,8 @@ def emit_robot_signals(delay,  sig1):
     schedule.enter(delay, 0, emit_robot_signals, (delay, sig1  ) )
     # emit robot's local taskinfo
     try:
+        datamgr_proxy.mRobotPeersAvailable.wait()
+        datamgr_proxy.mTaskInfoAvailable.wait()
         robotid = datamgr_proxy.mRobotID
         taskinfo = datamgr_proxy.mLocalTaskInfo.copy()
         peers = datamgr_proxy.mRobotPeers[ROBOT_PEERS]
@@ -56,9 +58,11 @@ def emit_robot_signals(delay,  sig1):
                 local_signal[int(peerid) - 2].LocalTaskInfo(peerid,  taskinfo)
             else:
                 local_signal[int(peerid) - 1].LocalTaskInfo(peerid,  taskinfo)
+        if datamgr_proxy.mRobotPeersAvailable.is_set():
+            datamgr_proxy.mRobotPeersAvailable.clear()
     except Exception, e:
         print "Err at emit_robot_signals():", e
-    # emit robot's task activity signal
+    ## emit robot's task activity signal
     try:
         datamgr_proxy.mSelectedTaskStarted.wait() ### Blocking !!! ###
         robotid = datamgr_proxy.mRobotID
@@ -68,6 +72,10 @@ def emit_robot_signals(delay,  sig1):
         status = str(taskdict[SELECTED_TASK_STATUS]) 
         #print "From TaskDict got %i %s"  %(taskid,  status)
         task_signal.TaskStatus(sig1,  robotid,  taskid)
+        ### ------------------- NEED TO SEE THE EFFECT -----------------##
+        if datamgr_proxy.mTaskTimedOut.is_set():
+            datamgr_proxy.mSelectedTaskStarted.clear()
+        ### -------------------------------------------------------------##
     except:
         print "Emitting Robot Task Status signal failed"
    
@@ -75,7 +83,7 @@ def emit_robot_signals(delay,  sig1):
 def emitter_main(dm,  dbus_iface= DBUS_IFACE_EPUCK,\
     dbus_path1 = DBUS_PATH_BASE,\
     sig1 = SIG_TASK_STATUS, sig2 = SIG_LOCAL_TASK_INFO,\
-    robots_cfg = ROBOTS_PATH_CFG_FILE, delay = 3):
+    robots_cfg = ROBOTS_PATH_CFG_FILE, delay = 5):
         dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
         session_bus = dbus.SessionBus()
         global task_signal,  datamgr_proxy, local_signal

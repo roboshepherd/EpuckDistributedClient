@@ -38,21 +38,23 @@ def swistrack_pose_signal_handler( x, y, theta):
         datamgr_proxy.mRobotPose[ROBOT_POSE_Y] = eval(str(y))
         datamgr_proxy.mRobotPose[ROBOT_POSE_THETA] = eval(str(theta))
         datamgr_proxy.mRobotPose[ROBOT_POSE_TS] = time.time()
-        datamgr_proxy.mRobotPoseAvailable.set()
+        if (not datamgr_proxy.mRobotPoseAvailable.is_set()):
+            datamgr_proxy.mRobotPoseAvailable.set()
     except:
        print "Err in save_pose()"
 
 def taskserver_signal_handler(sig,  taskinfo):
     global datamgr_proxy
-    #print "Caught signal  %s (in taskinfo signal handler) "  %(sig)
-    #print "Val: ",  val
+    print "Caught signal  %s (in taskinfo signal handler) "  %(sig)
+    #print "Val: ",  taskinfo
     try:
         datamgr_proxy.mTaskInfo.clear()
         for k, v in taskinfo.iteritems():
             key = eval(str(k))
             value = extract_objects(v)
             datamgr_proxy.mTaskInfo[key] = value
-        datamgr_proxy.mTaskInfoAvailable.set()
+        if (not datamgr_proxy.mTaskInfoAvailable.is_set()):
+            datamgr_proxy.mTaskInfoAvailable.set()
         #print datamgr_proxy.mTaskInfo
     except:
        print "Err in save_taskinfo()"
@@ -65,10 +67,12 @@ def swistrack_peers_signal_handler(robotid, val):
     print "Got peers:", peers
     datamgr_proxy.mRobotPeers[TIME_STAMP] = time.time()
     datamgr_proxy.mRobotPeers[ROBOT_PEERS] = peers
+    if (not datamgr_proxy.mRobotPeersAvailable.is_set()):
+            datamgr_proxy.mRobotPeersAvailable.set()
 
 def local_taskinfo_signal_handler(robotid, taskinfo):
     global datamgr_proxy
-    print "Caught local taskinfo signal for robot%i (local signal handler)"\
+    print "Caught local taskinfo signal for robot%s (local signal handler)" \
      %(robotid)
     if (int(robotid) == datamgr_proxy.mRobotID):
         print "Taskinfo sent to me: ",  taskinfo
@@ -89,14 +93,15 @@ def local_taskinfo_signal_handler(robotid, taskinfo):
                     print "Local task info updated @dm now:"
                     #print datamgr_proxy.mLocalTaskInfo
                 else:
-                    print "Robot's local task%d's info is more recent:" %key
+                    print "Robot's local  info is more recent:"
                     #print "@dm now:"
                     #print datamgr_proxy.mLocalTaskInfo
             else: # old dict was empty
                 datamgr_proxy.mLocalTaskInfo[key] = taskinfo_rcvd
                 print "Local task info added @dm now:"
                 #print  datamgr_proxy.mLocalTaskInfo
-                datamgr_proxy.mTaskInfoAvailable.set()
+                if (not datamgr_proxy.mTaskInfoAvailable.is_set()):
+                    datamgr_proxy.mTaskInfoAvailable.set()
     except Exception, e:
         print "Err:", e
         
@@ -133,15 +138,8 @@ def listener_main(data_mgr,  dbus_if1= DBUS_IFACE_TRACKER,\
              dbus_interface= dbus_if1, path = dbus_path3,  signal_name = sig3) 
             # catch task server's real task info
             bus.add_signal_receiver(taskserver_signal_handler, dbus_interface\
-             = dbus_if2, path= dbus_path2,  signal_name = sig2)
+             = dbus_if2, path= dbus_path3,  signal_name = sig2)
             # catch peer's local task info
-            #dbus_paths = GetDBusPaths(robots_cfg)
-            #tmp_paths = []
-            #for x in dbus_paths:
-                #if x != dbus_path1: # exclude self path
-                    #tmp_paths.append(x)
-            #local_paths = [(x + 'local') for x in tmp_paths]
-            #for p in local_paths:
             local_path = dbus_path1 + 'local'
             bus.add_signal_receiver(local_taskinfo_signal_handler,\
              dbus_interface= dbus_if4, path = local_path, signal_name = sig4)

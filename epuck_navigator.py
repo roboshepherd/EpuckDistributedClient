@@ -2,7 +2,7 @@ import  time
 import sys
 from math import fabs, atan2, atan
 
-from myro import Epuck
+from myro import *
 from RILCommonModules.RILSetup import *
 from RILCommonModules.pose import *
 from RILCommonModules.LiveGraph import *
@@ -20,8 +20,8 @@ ROTATE_CONST = 0.637/2 # mutiplying this with desired angle gives time(rotate)
 # typical value: 0.637  max val = 0.411
 FORWARD_STEP_TIME = 1
 # Obstacle Avoidance params
-BACKWARD_SPEED1 = -0.8 # orig: -0.4
-BACKWARD_TURN = 0.5 # orig: 0 , no turn
+BACKWARD_SPEED1 = -0.4 # orig: -0.4
+BACKWARD_TURN = 0.3 # orig: 0 , no turn
 TINY_SLEEP = 0.05 # orig: 0.05
 
 class NavFunc :
