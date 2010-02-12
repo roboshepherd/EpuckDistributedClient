@@ -78,16 +78,16 @@ class DeviceController():
         now = time.strftime("%Y%b%d-%H%M%S", time.gmtime())
         desc = "logged in centralized communication mode from: " + now
         # prepare label
-        label = "TimeStamp;StepCounter;X;Y;Theta \n"
+        label = "TimeStamp;HH:MM:SS;StepCounter;X;Y;Theta \n"
         # Data context
         ctx = DataCtx(name, label, desc)
         self.pose_writer = DataWriter("Robot", ctx, now, str(self.robotid))
 
     def GetCommonHeader(self):
-        ts = time.strftime("%H:%M:%S", time.gmtime())
         sep = DATA_SEP
+        ts = str(time.time()) + sep + time.strftime("%H:%M:%S", time.gmtime())
         self.step = self.step + 1
-        header = str(ts) + sep + str(self.step)
+        header = ts + sep + str(self.step)
         return header
     
     def AppendPoseLog(self):        
@@ -174,9 +174,14 @@ class DeviceController():
         return x, y, theta
 
     def GetTaskPoseXY(self):
-        st = self.datamgr_proxy.mSelectedTask[SELECTED_TASK_INFO]
-        x = st[TASK_INFO_X]
-        y= st[TASK_INFO_Y]
+        x = 0
+        y = 0 
+        try:
+            st = self.datamgr_proxy.mSelectedTask[SELECTED_TASK_INFO]
+            x = st[TASK_INFO_X]
+            y= st[TASK_INFO_Y]
+        except Exception, e:
+            print "GetTaskPoseXY() Er: ", e
         return x, y
 
     def DoRandomWalk(self):

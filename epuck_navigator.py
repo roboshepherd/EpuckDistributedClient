@@ -82,17 +82,17 @@ class EpuckNavigator:
         desc += "#" + "RotateDir:  Left== -1,  Right== 1 \n"
         desc += "#" + "Obstacle sensed: -1 : None, (0-7): Sensor#, 8: All"
         # prepare label
-        label = "TimeStamp;Step#;Coordinate;Translated;RotateDir;Angle(rad);\
+        label = "TimeStamp;HH:MM:SS;Step;Coordinate;Translated;RotateDir;Angle(rad);\
          ObstacleSensor# \n"
         # Data context
         ctx = DataCtx(name, label, desc)
         self.motion_writer = DataWriter("Robot", ctx, now)
 
     def GetCommonHeader(self):
-        ts = time.strftime("%H:%M:%S", time.gmtime())
         sep = DATA_SEP
+        ts = str(time.time()) + sep + time.strftime("%H:%M:%S", time.gmtime())
         self.step = self.step + 1
-        header = str(ts) + sep + str(self.step)
+        header = ts + sep + str(self.step)
         return header
     
     def AppendMotionLog(self):        

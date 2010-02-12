@@ -9,7 +9,8 @@ from EpuckDistributedClient.utils import *
 from EpuckDistributedClient.data_manager import *
 
 
-schedule = sched.scheduler(time.time, time.sleep)
+schedule1 = sched.scheduler(time.time, time.sleep)
+schedule2 = sched.scheduler(time.time, time.sleep)
 loop = None
 
 #------------------ Signal Despatch ---------------------------------
@@ -40,11 +41,10 @@ class LocalTaskInfoSignal(dbus.service.Object):
         global loop
         loop.quit()
 
-    
-def emit_robot_signals(delay,  sig1):
-    global task_signal,  datamgr_proxy, local_signal
+def  emit_local_taskinfo_signal(delay, sig):
+    global datamgr_proxy, local_signal
     # reschedule 
-    schedule.enter(delay, 0, emit_robot_signals, (delay, sig1  ) )
+    schedule2.enter(delay, 0, emit_local_taskinfo_signal, (delay, sig1  ) )
     # emit robot's local taskinfo
     try:
         datamgr_proxy.mRobotPeersAvailable.wait()
@@ -61,7 +61,12 @@ def emit_robot_signals(delay,  sig1):
         if datamgr_proxy.mRobotPeersAvailable.is_set():
             datamgr_proxy.mRobotPeersAvailable.clear()
     except Exception, e:
-        print "Err at emit_robot_signals():", e
+        print "Err at emit_robot_status_signal():", e
+
+def emit_robot_status_signal(delay,  sig1):
+    global task_signal,  datamgr_proxy
+    # reschedule 
+    schedule1.enter(delay, 0, emit_robot_status_signal, (delay, sig1  ) )    
     ## emit robot's task activity signal
     try:
         datamgr_proxy.mSelectedTaskStarted.wait() ### Blocking !!! ###
@@ -88,6 +93,7 @@ def emitter_main(dm,  dbus_iface= DBUS_IFACE_EPUCK,\
         session_bus = dbus.SessionBus()
         global task_signal,  datamgr_proxy, local_signal
         datamgr_proxy = dm
+        status_path = dbus_path1 + str(dm.mRobotID)
         dbus_paths = GetDBusPaths(robots_cfg)
         tmp_paths = []
         for x in dbus_paths:
@@ -96,7 +102,7 @@ def emitter_main(dm,  dbus_iface= DBUS_IFACE_EPUCK,\
         local_paths = [(x + 'local') for x in tmp_paths]
         try:
             name = dbus.service.BusName(dbus_iface, session_bus)
-            task_signal = RobotTaskEngagementSignal(dbus_path1)
+            task_signal = RobotTaskEngagementSignal(status_path)
             local_signal = []
             for p in local_paths:
                 local_signal.append(LocalTaskInfoSignal(p))
@@ -106,12 +112,15 @@ def emitter_main(dm,  dbus_iface= DBUS_IFACE_EPUCK,\
             traceback.print_exc()
             sys.exit(1)
         try:
-                e = schedule.enter(0, 0, emit_robot_signals, (delay,  sig1,  ))
-                schedule.run()
+                e1 = schedule1.enter(0, 0, emit_robot_status_signal,\
+                 (delay,  sig1,  ))
+                e2 = schedule2.enter(0, 0, emit_local_taskinfo_signal,\
+                 (delay,  sig2,  )) 
+                schedule1.run()
+                schedule2.run()
                 loop.run()
         except (KeyboardInterrupt, dbus.DBusException, SystemExit):
                 print "User requested exit... shutting down now"
                 task_signal.Exit()
                 local_signal.Exit()
-                pass
                 sys.exit(0)

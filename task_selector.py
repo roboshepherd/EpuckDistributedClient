@@ -17,7 +17,7 @@ LOG_TYPE_STIMULUS = "stimulus"
 LOG_TYPE_DIST = "dist"
 LOG_TYPE_SENSITIZATION = "sensitization"
 LOG_TYPE_URGENCY = "urgency"
-RW_TH = 0.5
+RW_TH = 0.1 # Attempt 1: 0.5
 
 class TaskProbRange():
     def __init__(self,  id):
@@ -187,7 +187,7 @@ class TaskSelector():
         now = time.strftime("%Y%b%d-%H%M%S", time.gmtime()) 
         desc = "logged in centralized communication mode from: " + now +"\n"
         # prepare label
-        label = "TimeStamp;StepCounter;SelectedTask"
+        label = "TimeStamp;HH:MM:SS;StepCounter;SelectedTask"
         for x in xrange(1,  MAX_SHOPTASK+1):
             label += "; "
             label += "Task"
@@ -210,13 +210,13 @@ class TaskSelector():
         
         # raw pose  
         ctx.name = "PoseAtTS"
-        ctx.label = "TimeStamp;StepCounter;SelectedTask;X;Y;Theta \n"
+        ctx.label = "TimeStamp;HH:MM:SS;StepCounter;SelectedTask;X;Y;Theta \n"
         self.pose_writer = DataWriter("Robot", ctx, now, robotid)
     
     def GetCommonHeader(self):
-        ts = time.strftime("%H:%M:%S", time.gmtime())
         sep = self.data_ctx.sep
-        header = str(ts) + sep + str(self.step) + sep +\
+        ts = str(time.time()) + sep + time.strftime("%H:%M:%S", time.gmtime())
+        header = ts  + sep + str(self.step) + sep +\
          str(self.selected_taskid)
         return header
 
