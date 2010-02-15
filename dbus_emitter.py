@@ -44,7 +44,7 @@ class LocalTaskInfoSignal(dbus.service.Object):
 def  emit_local_taskinfo_signal(delay, sig):
     global datamgr_proxy, local_signal
     # reschedule 
-    schedule2.enter(delay, 0, emit_local_taskinfo_signal, (delay, sig1  ) )
+    schedule2.enter(delay, 0, emit_local_taskinfo_signal, (delay, sig  ) )
     # emit robot's local taskinfo
     try:
         datamgr_proxy.mRobotPeersAvailable.wait()

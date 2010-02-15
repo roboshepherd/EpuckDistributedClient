@@ -17,7 +17,7 @@ LOG_TYPE_STIMULUS = "stimulus"
 LOG_TYPE_DIST = "dist"
 LOG_TYPE_SENSITIZATION = "sensitization"
 LOG_TYPE_URGENCY = "urgency"
-RW_TH = 0.1 # Attempt 1: 0.5
+RW_TH = RW_MAX_URGENCY # Attempt 1: 0.5
 
 class TaskProbRange():
     def __init__(self,  id):
@@ -188,7 +188,7 @@ class TaskSelector():
         desc = "logged in centralized communication mode from: " + now +"\n"
         # prepare label
         label = "TimeStamp;HH:MM:SS;StepCounter;SelectedTask"
-        for x in xrange(1,  MAX_SHOPTASK+1):
+        for x in xrange(0,  MAX_SHOPTASK+1):
             label += "; "
             label += "Task"
             label += str(x)
