@@ -43,12 +43,13 @@ class LocalTaskInfoSignal(dbus.service.Object):
 
 def  emit_local_taskinfo_signal(delay, sig):
     global datamgr_proxy, local_signal
-    # reschedule 
-    schedule2.enter(delay, 0, emit_local_taskinfo_signal, (delay, sig  ) )
+    # reschedule
+    print "Entering to emit_local_taskinfo_signal ..."
+    schedule1.enter(delay+1, 0, emit_local_taskinfo_signal, (delay+1, sig  ) )
     # emit robot's local taskinfo
     try:
         datamgr_proxy.mRobotPeersAvailable.wait()
-        datamgr_proxy.mTaskInfoAvailable.wait()
+        #datamgr_proxy.mTaskInfoAvailable.wait()
         robotid = datamgr_proxy.mRobotID
         taskinfo = datamgr_proxy.mLocalTaskInfo.copy()
         peers = datamgr_proxy.mRobotPeers[ROBOT_PEERS]
@@ -66,7 +67,7 @@ def  emit_local_taskinfo_signal(delay, sig):
 def emit_robot_status_signal(delay,  sig1):
     global task_signal,  datamgr_proxy
     # reschedule 
-    schedule1.enter(delay, 0, emit_robot_status_signal, (delay, sig1  ) )    
+    schedule1.enter(delay, 0, emit_robot_status_signal, (delay, sig1  ) )
     ## emit robot's task activity signal
     try:
         datamgr_proxy.mSelectedTaskStarted.wait() ### Blocking !!! ###
@@ -112,12 +113,12 @@ def emitter_main(dm,  dbus_iface= DBUS_IFACE_EPUCK,\
             traceback.print_exc()
             sys.exit(1)
         try:
-                e1 = schedule1.enter(0, 0, emit_robot_status_signal,\
+                e1 = schedule1.enter(1, 0, emit_robot_status_signal,\
                  (delay,  sig1,  ))
-                e2 = schedule2.enter(0, 0, emit_local_taskinfo_signal,\
-                 (delay,  sig2,  )) 
+                e2 = schedule1.enter(2, 0, emit_local_taskinfo_signal,\
+                 (delay+1,  sig2,  )) 
                 schedule1.run()
-                schedule2.run()
+                #schedule2.run()
                 loop.run()
         except (KeyboardInterrupt, dbus.DBusException, SystemExit):
                 print "User requested exit... shutting down now"
