@@ -4,12 +4,70 @@ import dbus, dbus.service, dbus.mainloop.glib
 import multiprocessing,  logging,  logging.config,  logging.handlers
 
 from RILCommonModules.RILSetup import *
+from RILCommonModules.LiveGraph import *
 from RILCommonModules.utils import *
 from EpuckDistributedClient.data_manager import *
 from EpuckDistributedClient.utils import *
 
 #logging.config.fileConfig("logging.conf")
 logger = logging.getLogger("EpcLogger")
+
+#---------------------Log recevd. signal/data  ---------------------
+class CommLogger():
+    def __init__(self, dm):
+        self.datamgr_proxy = dm
+        self.robotid = dm.GetRobotID()
+        self.log_writer1 = None  # for logging recvd. taskinfo signal
+        self.log_writer2 = None  # for logging recvd. robotpeers signal            
+        self.step = 0
+
+    def InitLogFiles(self):
+        name = "DBusListener-TaskSignal"
+        now = time.strftime("%Y%b%d-%H%M%S", time.gmtime())
+        desc = "logged in local communication mode from: " + now
+        # prepare label
+        label = "TimeStamp;HH:MM:SS;StepCounter;SRC; TaskInfoLen;TaskIDList \n"
+        # Data context
+        ctx = DataCtx(name, label, desc)
+        # Signal Logger
+        self.log_writer1 = DataWriter("Robot", ctx, now, str(self.robotid))
+        name = "DBusListener-PeerSignal"
+        label = "TimeStamp;HH:MM:SS;StepCounter;SRC; Len;Desc \n"
+        # Data context
+        ctx = DataCtx(name, label, desc)
+        # Signal Logger
+        self.log_writer2 = DataWriter("Robot", ctx, now, str(self.robotid))
+
+    def _GetCommonHeader(self):
+        sep = DATA_SEP
+        ts = str(time.time()) + sep + time.strftime("%H:%M:%S", time.gmtime())
+        self.step = self.step + 1
+        header = ts + sep + str(self.step)
+        return header
+    
+    def AppendCommLog(self, desc, taskinfo):        
+        sep = DATA_SEP
+        length = len(taskinfo)
+        task_ids = taskinfo.keys()
+        task_ids.sort() 
+        log = self._GetCommonHeader() + sep + desc\
+         + sep + str(length) + sep + str(task_ids) + "\n"
+        try: 
+            self.log_writer1.AppendData(log)
+        except:
+            print "TaskInfo signal logging failed"
+
+    def AppendPeerLog(self, desc, peers):        
+        sep = DATA_SEP
+        length = len(peers)        
+        peers.sort() 
+        log = self._GetCommonHeader() + sep + desc\
+         + sep + str(length) + sep + str(peers) + "\n"
+        try: 
+            self.log_writer2.AppendData(log)
+        except:
+            print "RobotPeers signal logging failed"
+
 
 #--------------------- Signal Reception ----------------------------
 
@@ -45,8 +103,9 @@ def swistrack_pose_signal_handler( x, y, theta):
 
 def taskserver_signal_handler(sig,  taskinfo):
     global datamgr_proxy
-    print "Caught signal  %s (in taskinfo signal handler) "  %(sig)
+    #print "Caught signal  %s (in taskinfo signal handler) "  %(sig)
     #print "Val: ",  taskinfo
+    comm_logger.AppendCommLog(" taskinfo (from taskserver)", taskinfo)	
     try:
         datamgr_proxy.mTaskInfo.clear()
         for k, v in taskinfo.iteritems():
@@ -64,7 +123,8 @@ def swistrack_peers_signal_handler(robotid, val):
     #print "Caught signal over /robot%s (robot peers signal handler)" %(robotid)
     #print "Val: ",  val    
     peers = extract_objects(val)
-    print "Got peers:", peers
+    #print "Got peers:", peers
+    comm_logger.AppendPeerLog(" peerlist (from swistrack)", peers)
     datamgr_proxy.mRobotPeers[TIME_STAMP] = time.time()
     datamgr_proxy.mRobotPeers[ROBOT_PEERS] = peers
     if (not datamgr_proxy.mRobotPeersAvailable.is_set()):
@@ -72,10 +132,11 @@ def swistrack_peers_signal_handler(robotid, val):
 
 def local_taskinfo_signal_handler(robotid, taskinfo):
     global datamgr_proxy
-    print "Caught local taskinfo signal for robot%s (local signal handler)" \
-     %(robotid)
-    if (int(robotid) == datamgr_proxy.mRobotID):
-        print "Taskinfo sent to me: ",  taskinfo
+    logger.debug("Caught local taskinfo signal for robot%s\
+     (local signal handler)", robotid)    
+    if (int(robotid)) == int(datamgr_proxy.mRobotID):
+        logger.debug("Taskinfo sent to me: %s",  taskinfo)
+        comm_logger.AppendCommLog(" taskinfo (from peer)", taskinfo)
     else:
         return
     # TODO: put taskinfo of peers into data manger
@@ -85,10 +146,10 @@ def local_taskinfo_signal_handler(robotid, taskinfo):
         for k, v in taskinfo.iteritems():
             key = eval(str(k))
             taskinfo_rcvd = extract_objects(v)
-            if key in local_taskinfo:
+            if key in local_taskinfo.keys():
                 taskinfo_old = local_taskinfo[key]
-                if (taskinfo_rcvd[TASK_INFO_TIME]\
-                  > taskinfo_old[TASK_INFO_TIME]):                    
+                if (int(taskinfo_rcvd[TASK_INFO_TIME])\
+                  > int(taskinfo_old[TASK_INFO_TIME])):                    
                     datamgr_proxy.mLocalTaskInfo[key] = taskinfo_rcvd
                     print "Local task info updated @dm now:"
                     #print datamgr_proxy.mLocalTaskInfo
@@ -123,12 +184,15 @@ def listener_main(data_mgr,  dbus_if1= DBUS_IFACE_TRACKER,\
             sig1 = SIG_ROBOT_POSE, sig2= SIG_TASK_INFO, sig3= SIG_ROBOT_PEERS,\
             sig4= SIG_LOCAL_TASK_INFO, delay=3 ):
         print "Initializing dbus listener"
-        global datamgr_proxy,  task_signal
+        global datamgr_proxy,  task_signal, comm_logger 
         datamgr_proxy = data_mgr
         dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
         bus = dbus.SessionBus()
         #print "%s, %s, %s" %(dbus_if1, dbus_path1, sig1)
-        dbus_path3 = dbus_path1 + str(data_mgr.mRobotID)        
+        dbus_path3 = dbus_path1 + str(data_mgr.mRobotID)
+	# setup logging signals        
+        comm_logger = CommLogger(data_mgr)
+        comm_logger.InitLogFiles()
         try:
             # catch swistrack's pose_signal
             bus.add_signal_receiver(swistrack_pose_signal_handler,\
@@ -140,7 +204,7 @@ def listener_main(data_mgr,  dbus_if1= DBUS_IFACE_TRACKER,\
             bus.add_signal_receiver(taskserver_signal_handler, dbus_interface\
              = dbus_if2, path= dbus_path3,  signal_name = sig2)
             # catch peer's local task info
-            local_path = dbus_path1 + 'local'
+            local_path = dbus_path3 + 'local'
             bus.add_signal_receiver(local_taskinfo_signal_handler,\
              dbus_interface= dbus_if4, path = local_path, signal_name = sig4)
             main_loop()

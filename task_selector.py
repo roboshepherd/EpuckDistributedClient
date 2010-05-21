@@ -43,6 +43,7 @@ class TaskSelector():
         self.sensitization_writer = None
         self.pose_writer = None
         self.urgency_writer = None
+        self.taskinfo_writer = None
 
     def  CalculateDist(self,  rp,  tx,  ty):
         if USE_NORMALIZED_POSE is True:
@@ -76,12 +77,20 @@ class TaskSelector():
         r.pose.UpdateFromList(dm.mRobotPose)
         logger.debug("@TS  Robot pose x=%f y=%f:" , r.pose.x,  r.pose.y )
         ##--------------------TEST THIS  ---------------------------##
-        ti = self.taskinfo
+        ti = dm.LocalTaskInfo.copy()
+        logger.debug("listened taskinfo from peers: %s", ti)
         # Combine both local peer's and task-server's taskinfo, if any
         tmp = dm.mTaskInfo.copy()
-        print "tmp ti:", tmp
-        ti.update(tmp)
-        print "Updated ti with taskserver's ti':", ti.items()
+        logger.debug("perceived taskinfo from server: %s", tmp)        
+        try:
+            ti.update(tmp)
+            self.AppendTaskInfoLog(ti)            
+            # update local taskinfo since this will be emitted to peers
+            for k in ti.key():
+                dm.LocalTaskInfo[k] = ti[k]
+            logger.debug("Merged TaskInfo':%s", dm.LocalTaskInfo.items())
+        except Exception, e:
+            print "Err at CalculateProbabilities():", e
         ##-----------------------------------------------------------##
         logger.debug("\t TaskInfo: %s",  ti.items() )
         taskCount = len(ti)
@@ -185,7 +194,7 @@ class TaskSelector():
         # -- Init Stimuli writer --
         name = "Stimulus"
         now = time.strftime("%Y%b%d-%H%M%S", time.gmtime()) 
-        desc = "logged in centralized communication mode from: " + now +"\n"
+        desc = "logged in local communication mode from: " + now +"\n"
         # prepare label
         label = "TimeStamp;HH:MM:SS;StepCounter;SelectedTask"
         for x in xrange(0,  MAX_SHOPTASK+1):
@@ -212,6 +221,13 @@ class TaskSelector():
         ctx.name = "PoseAtTS"
         ctx.label = "TimeStamp;HH:MM:SS;StepCounter;SelectedTask;X;Y;Theta \n"
         self.pose_writer = DataWriter("Robot", ctx, now, robotid)
+
+        # taskinfo   
+        ctx.name = "TaskInfo"
+        ctx.label = "TimeStamp;HH:MM:SS;StepCounter;SelectedTask;\
+         TaskInfoCount;TaskInfo \n"
+        self.taskinfo_writer = DataWriter("Robot", ctx, now, robotid)
+
     
     def GetCommonHeader(self):
         sep = self.data_ctx.sep
@@ -246,6 +262,19 @@ class TaskSelector():
         log +="\n"
         return log
     
+    def AppendTaskInfoLog(self, taskinfo):        
+        sep = DATA_SEP
+        length = len(taskinfo)        
+        task_ids = taskinfo.keys()
+        task_ids.sort() 
+        log = self.GetCommonHeader()\
+         + sep + str(length) + sep + str(task_ids) + "\n"
+        try: 
+            self.taskinfo_writer.AppendData(log)
+        except:
+            logger.warn("TaskInfo logging failed")	
+            print "TaskInfo logging failed"
+
     def AppendTaskLogs(self):
         try:
             self.stimuli_writer.AppendData(self.GetTaskLog(LOG_TYPE_STIMULUS))
@@ -255,6 +284,7 @@ class TaskSelector():
                 self.GetTaskLog(LOG_TYPE_SENSITIZATION))            
         except Exception, e:
             print "Task logging failed: ", e
+            logger.warn("Task logging failed")
             
     def AppendPoseLog(self):        
         sep = self.data_ctx.sep
@@ -265,6 +295,7 @@ class TaskSelector():
             self.pose_writer.AppendData(log)
         except:
             print "Pose logging failed"
+            logger.warn("Pose logging failed")
     
     def SelectTask(self):
         self.CalculateProbabilities()

@@ -5,7 +5,7 @@ import time
 import sys
 import  logging,  logging.config,  logging.handlers
 logging.config.fileConfig("/home/newport-ril/\
-centralized-expt/EpuckCentralizedClient/logging.conf")
+centralized-expt/EpuckDistributedClient/logging.conf")
 logger = logging.getLogger("EpcLogger")
 multiprocessing.log_to_stderr(logging.DEBUG)
 
@@ -23,21 +23,22 @@ from EpuckDistributedClient.device_controller import *
 def main():
 	logging.debug("--- Start EPC---")
 	##dbus_server.start()
+	data_mgr.start()
 	dbus_listener.start()
-	device_controller.start()
+	#device_controller.start()
 	taskselector.start()
 	dbus_emitter.start()
 	# Ending....
 	time.sleep(2)
 	##dbus_server.join()
 	try:
-		pass
+		data_mgr.join()
 		dbus_listener.join()
-		device_controller.join()
+		#device_controller.join()
 		taskselector.join()
 		dbus_emitter.join()
 	except (KeyboardInterrupt, SystemExit):
-		#logging.debug("--- End EPC---")
+		logging.debug("--- End EPC---")
 		print "User requested exit..ClientMain shutting down now"                
 		sys.exit(0)
 
@@ -81,6 +82,10 @@ if __name__ == '__main__':
 		#target=dbus_server.server_main,
 		#name="SwisTrackProxy",\
 		#args=(DBUS_IFACE_TRACKER, dbus_shared_path,  sig1,  delay,))
+	data_mgr = multiprocessing.Process(\
+		target=datamgr_main,
+		name="DataMgrServer",\
+		args=(dm,))
 	dbus_listener = multiprocessing.Process(\
 		target=listener_main,\
 		name="DBusListener",\
@@ -93,10 +98,10 @@ if __name__ == '__main__':
 		target=emitter_main,\
 		name="DBusEmitter",\
 		args=(dm, ))
-	device_controller =  multiprocessing.Process(\
-		target=controller_main,\
-		name="DeviceController",  
-		args=(dm,))
+	#device_controller =  multiprocessing.Process(\
+		#target=controller_main,\
+		#name="DeviceController",  
+		#args=(dm,))
 	main()
       
 

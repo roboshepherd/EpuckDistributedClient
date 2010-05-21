@@ -8,17 +8,18 @@ from RILCommonModules.RILSetup import *
 from EpuckDistributedClient.utils import *
 from EpuckDistributedClient.data_manager import *
 
+logger = logging.getLogger("EpcLogger")
 
 schedule1 = sched.scheduler(time.time, time.sleep)
-schedule2 = sched.scheduler(time.time, time.sleep)
+#schedule2 = sched.scheduler(time.time, time.sleep)
 loop = None
 
 #------------------ Signal Despatch ---------------------------------
 class RobotTaskEngagementSignal(dbus.service.Object):
     def __init__(self, object_path):
         dbus.service.Object.__init__(self, dbus.SessionBus(), object_path)
-    @dbus.service.signal(dbus_interface= DBUS_IFACE_EPUCK, signature='sii')
-    def  TaskStatus(self,  sig,  robotid,  taskid):
+    @dbus.service.signal(dbus_interface= DBUS_IFACE_EPUCK, signature='siii')
+    def  TaskStatus(self,  sig,  robotid,  taskid, known_tasks):
         #logger.info("Emitted %s : Robot %d now %s ",  sig,  taskid,  status)
         #print "Emitted %s : Robot selected task %d now %s \
         #"  %(sig,  taskid,  status)
@@ -44,25 +45,25 @@ class LocalTaskInfoSignal(dbus.service.Object):
 def  emit_local_taskinfo_signal(delay, sig):
     global datamgr_proxy, local_signal
     # reschedule
-    print "Entering to emit_local_taskinfo_signal ..."
-    schedule1.enter(delay+1, 0, emit_local_taskinfo_signal, (delay+1, sig  ) )
+    logger.info("Entering to emit_local_taskinfo_signal ...")
+    schedule1.enter(delay + 2, 0, emit_local_taskinfo_signal, (delay + 2, sig  ) )
     # emit robot's local taskinfo
     try:
         datamgr_proxy.mRobotPeersAvailable.wait()
-        #datamgr_proxy.mTaskInfoAvailable.wait()
-        robotid = datamgr_proxy.mRobotID
-        taskinfo = datamgr_proxy.mLocalTaskInfo.copy()
+        datamgr_proxy.mTaskInfoAvailable.wait()
+        robotid = int(datamgr_proxy.mRobotID)
+        taskinfo = datamgr_proxy.mLocalTaskInfo.copy() ## TODO: Log this
         peers = datamgr_proxy.mRobotPeers[ROBOT_PEERS]
         for peerid in peers:
-            print "Emitting target peer channel: /robot", peerid
+            logger.info("Emitting target peer channel: /robot%s", peerid)
             if int(peerid) > robotid:
-                local_signal[int(peerid) - 2].LocalTaskInfo(peerid,  taskinfo)
+                local_signal[int(peerid)].LocalTaskInfo(int(peerid),  taskinfo)
             else:
-                local_signal[int(peerid) - 1].LocalTaskInfo(peerid,  taskinfo)
+                local_signal[int(peerid)].LocalTaskInfo(int(peerid),  taskinfo)
         if datamgr_proxy.mRobotPeersAvailable.is_set():
             datamgr_proxy.mRobotPeersAvailable.clear()
     except Exception, e:
-        print "Err at emit_robot_status_signal():", e
+        logger.warn("Err at emit_robot_status_signal(): %s", e)
 
 def emit_robot_status_signal(delay,  sig1):
     global task_signal,  datamgr_proxy
@@ -71,25 +72,28 @@ def emit_robot_status_signal(delay,  sig1):
     ## emit robot's task activity signal
     try:
         datamgr_proxy.mSelectedTaskStarted.wait() ### Blocking !!! ###
+        #if (not datamgr_proxy.IsSelectedTaskAvailable):
+        #    return
         robotid = datamgr_proxy.mRobotID
-        taskdict = datamgr_proxy.mSelectedTask
+        taskdict = datamgr_proxy.mSelectedTask.copy()
         datamgr_proxy.mSelectedTaskStarted.clear()
         taskid =  eval(str(taskdict[SELECTED_TASK_ID])) 
-        status = str(taskdict[SELECTED_TASK_STATUS]) 
+        status = str(taskdict[SELECTED_TASK_STATUS])
+        known_tasks = len(datamgr_proxy.LocalTaskInfo.copy())
         #print "From TaskDict got %i %s"  %(taskid,  status)
-        task_signal.TaskStatus(sig1,  robotid,  taskid)
+        task_signal.TaskStatus(sig1,  robotid,  taskid, known_tasks)
         ### ------------------- NEED TO SEE THE EFFECT -----------------##
-        if datamgr_proxy.mTaskTimedOut.is_set():
+        if datamgr_proxy.mSelectedTaskStarted.is_set():
             datamgr_proxy.mSelectedTaskStarted.clear()
         ### -------------------------------------------------------------##
-    except:
-        print "Emitting Robot Task Status signal failed"
+    except Exception, e:
+        logger.warn("Emitting Robot Task Status signal failed: %s", e)
    
 
 def emitter_main(dm,  dbus_iface= DBUS_IFACE_EPUCK,\
     dbus_path1 = DBUS_PATH_BASE,\
     sig1 = SIG_TASK_STATUS, sig2 = SIG_LOCAL_TASK_INFO,\
-    robots_cfg = ROBOTS_PATH_CFG_FILE, delay = 5):
+    robots_cfg = ROBOTS_PATH_CFG_FILE, delay = 3):
         dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
         session_bus = dbus.SessionBus()
         global task_signal,  datamgr_proxy, local_signal
@@ -113,10 +117,10 @@ def emitter_main(dm,  dbus_iface= DBUS_IFACE_EPUCK,\
             traceback.print_exc()
             sys.exit(1)
         try:
-                e1 = schedule1.enter(1, 0, emit_robot_status_signal,\
+                e1 = schedule1.enter(0, 0, emit_robot_status_signal,\
                  (delay,  sig1,  ))
                 e2 = schedule1.enter(2, 0, emit_local_taskinfo_signal,\
-                 (delay+1,  sig2,  )) 
+                 (delay + 2,  sig2,  )) 
                 schedule1.run()
                 #schedule2.run()
                 loop.run()
