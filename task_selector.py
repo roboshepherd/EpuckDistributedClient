@@ -77,7 +77,7 @@ class TaskSelector():
         r.pose.UpdateFromList(dm.mRobotPose)
         logger.debug("@TS  Robot pose x=%f y=%f:" , r.pose.x,  r.pose.y )
         ##--------------------TEST THIS  ---------------------------##
-        ti = dm.LocalTaskInfo.copy()
+        ti = dm.mLocalTaskInfo.copy()
         logger.debug("listened taskinfo from peers: %s", ti)
         # Combine both local peer's and task-server's taskinfo, if any
         tmp = dm.mTaskInfo.copy()
@@ -86,9 +86,9 @@ class TaskSelector():
             ti.update(tmp)
             self.AppendTaskInfoLog(ti)            
             # update local taskinfo since this will be emitted to peers
-            for k in ti.key():
-                dm.LocalTaskInfo[k] = ti[k]
-            logger.debug("Merged TaskInfo':%s", dm.LocalTaskInfo.items())
+            for k in ti.keys():
+                dm.mLocalTaskInfo[k] = ti[k]
+            logger.debug("Merged TaskInfo':%s", dm.mLocalTaskInfo.items())
         except Exception, e:
             print "Err at CalculateProbabilities():", e
         ##-----------------------------------------------------------##
@@ -115,6 +115,9 @@ class TaskSelector():
                 r.taskrec[taskid].dist = dist
                 r.taskrec[taskid].stimuli = stimuli
                 r.taskrec[taskid].urgency = urg
+                # Forget about near-zero sensitized tasks
+                if (learn <= 0):
+                    del dm.mLocalTaskInfo[taskid]                
         except:
             logger.error("FIXME --  list error")
         tsSum = math.fsum(self.stimulus)

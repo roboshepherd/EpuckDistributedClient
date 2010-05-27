@@ -229,6 +229,7 @@ class DeviceController():
         y = 0 
         try:
             td = eval(self.datamgr_proxy.GetSelectedTask())
+            logger.warn("GetTaskPoseXY(): selected task %s", td)
             st = td[SELECTED_TASK_INFO]
             x = st[TASK_INFO_X]
             y= st[TASK_INFO_Y]

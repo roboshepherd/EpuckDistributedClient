@@ -39,44 +39,52 @@ class DataManager:
         return str(val)
     def IsRobotPoseAvailable(self):
         val = False
-        if self.mRobotPoseAvailable:
+        if self.mRobotPoseAvailable.is_set():
             val = True
         return val
     def GetTaskInfo(self):
         val = self.mTaskInfo.copy()
         return str(val)
     def IsTaskInfoAvailable(self):
-        val = self.mTaskInfoAvailable
-        return str(val)
+        val = False
+        if self.mTaskInfoAvailable.is_set():
+            val = True
+        return val
     def GetSelectedTask(self):
         val = self.mSelectedTask.copy()
         return str(val) 
     def IsSelectedTaskAvailable(self):
         val = False
-        if self.mSelectedTaskAvailable:
+        if self.mSelectedTaskAvailable.is_set():
             val = True
         return val
     def IsSelectedTaskStarted(self):
         val = False
-        if self.mSelectedTaskStarted:
+        if self.mSelectedTaskStarted.is_set():
             val = True
         return val
     def IsTaskTimedOut(self):
         val = False
-        if self.mTaskTimedOut:
+        if self.mTaskTimedOut.is_set():
             val = True
         return val
 
     def GetRobotPeers(self):
-	val = self.mRobotPeers.copy()
+        val = []
+        if self.IsRobotPeersAvailable():
+            val = self.mRobotPeers[ROBOT_PEERS]
         return str(val)    	
     def IsRobotPeersAvailable(self):
         val = False
-        if self.mRobotPeersAvailable:
+        if self.mRobotPeersAvailable.is_set():
             val = True
         return val
     def GetLocalTaskInfo(self):
-	val = self.mLocalTaskInfo.copy()
+        val = {}
+        if self.IsTaskInfoAvailable():
+            val = self.mLocalTaskInfo.copy()
+            tmp = self.mTaskInfo.copy()
+            val.update(tmp)
         return str(val) 
 	
 ## mutators
@@ -155,3 +163,4 @@ def datamgr_main(dm):
     srv = mgr.get_server()
     srv.serve_forever()
 
+## Note: When getting value from data_manager, we need to use eval()
